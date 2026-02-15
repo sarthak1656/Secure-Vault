@@ -1,11 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Search, Bell, Menu, LogOut, User, Settings, ChevronDown } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 const Header = ({ title, onMenuClick, showSearch = true }) => {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
+  
+  // FIXED: Extract isLoading from useAuth
+  const { user, logout, isLoading } = useAuth();
+
+  // Get user initials for avatar
+  const getUserInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ').map(word => word[0]).join('').toUpperCase().slice(0, 2);
+  };
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -18,10 +28,31 @@ const Header = ({ title, onMenuClick, showSearch = true }) => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken'); // Clear token
-    navigate('/login'); // Redirect to login
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
   };
+
+  // FIXED: Show Skeleton Loader while loading
+  // This prevents the "User" -> "Actual Name" flash
+  if (isLoading) {
+    return (
+      <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 relative z-20">
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="md:hidden w-10 h-10 bg-slate-100 rounded-lg animate-pulse"></div>
+          {showSearch ? (
+             <div className="w-full md:w-96 h-10 bg-slate-100 rounded-lg animate-pulse"></div>
+          ) : (
+             <div className="h-8 w-48 bg-slate-100 rounded animate-pulse"></div>
+          )}
+        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto justify-end">
+          <div className="w-10 h-10 bg-slate-100 rounded-full animate-pulse"></div>
+          <div className="w-24 h-10 bg-slate-100 rounded-full animate-pulse"></div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <header className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 relative z-20">
@@ -64,7 +95,7 @@ const Header = ({ title, onMenuClick, showSearch = true }) => {
             className="flex items-center gap-2 hover:bg-slate-50 p-1.5 pr-3 rounded-full transition-colors border border-transparent hover:border-slate-100"
           >
             <div className="w-9 h-9 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold border-2 border-indigo-50 shadow-sm">
-              JD
+              {getUserInitials(user?.name)}
             </div>
             <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -73,8 +104,8 @@ const Header = ({ title, onMenuClick, showSearch = true }) => {
           {isProfileOpen && (
             <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 z-50 animate-in fade-in zoom-in-95 duration-200">
               <div className="px-4 py-3 border-b border-slate-50 mb-1">
-                <p className="text-sm font-bold text-slate-900">John Doe</p>
-                <p className="text-xs text-slate-500 truncate">john.doe@example.com</p>
+                <p className="text-sm font-bold text-slate-900 truncate">{user?.name}</p>
+                <p className="text-xs text-slate-500 truncate">{user?.email}</p>
               </div>
               
               <button 

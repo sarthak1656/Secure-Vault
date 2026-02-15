@@ -1,15 +1,27 @@
-import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import React from "react";
+import { Navigate, Outlet } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext";
+import Loader from "../common/Loader";
 
 const PrivateRoute = () => {
-  // 1. Check if the user is authenticated
-  // We check if a token exists in LocalStorage.
-  // In a real app, you might also check if the token is valid/expired.
-  const isAuthenticated = localStorage.getItem('authToken');
+  const { isAuthenticated, isLoading } = useAuth();
 
-  // 2. If authenticated, render the child routes (Outlet)
-  // 3. If NOT authenticated, redirect to the Login page
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  // While checking authentication, show loader
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader size="lg" />
+      </div>
+    );
+  }
+
+  // If not authenticated, redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // If authenticated, render child routes
+  return <Outlet />;
 };
 
 export default PrivateRoute;

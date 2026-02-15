@@ -1,19 +1,65 @@
-import React from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, FileText, Share2, UploadCloud, Settings, LogOut, Shield, X } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
+import {
+  LayoutDashboard,
+  FileText,
+  Share2,
+  UploadCloud,
+  Settings,
+  LogOut,
+  Shield,
+  X,
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+import { dashboardAPI } from "../../services/api";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const navigate = useNavigate();
+  const { logout, isLoading } = useAuth();
+  const [storageData, setStorageData] = useState({
+    used: 0,
+    limit: 0,
+    percentage: 0
+  });
+  const [sharedFilesCount, setSharedFilesCount] = useState(0);
 
-  const handleLogout = () => {
-    localStorage.removeItem('authToken');
-    navigate('/login');
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const response = await dashboardAPI.getDashboardData();
+        const stats = response.data.stats;
+        setStorageData({
+          used: stats.storageUsed || 0,
+          limit: stats.storageLimit || 5,
+          percentage: stats.storagePercentage || 0
+        });
+        setSharedFilesCount(stats.sharedFiles || 0);
+      } catch (error) {
+        console.error("Failed to fetch storage data:", error);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
+
+  const handleLogout = async () => {
+    await logout();
+    navigate("/login");
   };
 
   const navItems = [
-    { icon: <LayoutDashboard size={20} />, label: "Dashboard", path: "/dashboard" },
+    {
+      icon: <LayoutDashboard size={20} />,
+      label: "Dashboard",
+      path: "/dashboard",
+    },
     { icon: <FileText size={20} />, label: "My Files", path: "/my-files" },
-    { icon: <Share2 size={20} />, label: "Shared With Me", path: "/shared", badge: 3 },
+    {
+      icon: <Share2 size={20} />,
+      label: "Shared With Me",
+      path: "/shared",
+      badge: sharedFilesCount > 0 ? sharedFilesCount : null,
+    },
     { icon: <UploadCloud size={20} />, label: "Upload File", path: "/upload" },
     { icon: <Settings size={20} />, label: "Settings", path: "/settings" },
   ];
@@ -27,11 +73,11 @@ const Sidebar = ({ isOpen, onClose }) => {
          - md:translate-x-0: Always visible (slid in) on Desktop
          - ${isOpen ? 'translate-x-0' : '-translate-x-full'}: Slides in/out on Mobile
       */}
-      <aside 
+      <aside
         className={`
           fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white shadow-xl
           transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} 
+          ${isOpen ? "translate-x-0" : "-translate-x-full"} 
           md:translate-x-0
         `}
       >
@@ -41,13 +87,16 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div className="bg-blue-600 p-2 rounded-lg">
               <Shield className="w-6 h-6 text-white" />
             </div>
-            <span className="text-xl font-bold tracking-wide">Secure Vault</span>
+            <span className="text-xl font-bold tracking-wide">
+              Secure Vault
+            </span>
           </div>
-          
+
           {/* Close Button (Mobile Only) */}
-          <button 
-            onClick={onClose} 
-            className="md:hidden text-slate-400 hover:text-white"
+          <button
+            onClick={onClose}
+            className="md:hidden text-slate-400 hover:text-white disabled:opacity-50"
+            disabled={isLoading}
           >
             <X size={24} />
           </button>
@@ -62,9 +111,11 @@ const Sidebar = ({ isOpen, onClose }) => {
               onClick={() => onClose()} // Auto-close menu on mobile when a link is clicked
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200
-                ${isActive 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/50' 
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
+                ${
+                  isActive
+                    ? "bg-blue-600 text-white shadow-lg shadow-blue-900/50"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                }
               `}
             >
               {item.icon}
@@ -83,21 +134,29 @@ const Sidebar = ({ isOpen, onClose }) => {
           <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
             <div className="flex justify-between text-sm mb-2">
               <span className="text-slate-400">Storage</span>
-              <span className="text-blue-400 font-bold">50%</span>
+              <span className="text-blue-400 font-bold">{storageData.percentage}%</span>
             </div>
             <div className="w-full bg-slate-700 rounded-full h-2 mb-2">
-              <div className="bg-blue-500 h-2 rounded-full w-1/2 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+              <div 
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(59,130,246,0.5)]"
+                style={{ width: `${storageData.percentage}%` }}
+              ></div>
             </div>
-            <div className="text-xs text-slate-500">2.5 GB / 5 GB used</div>
+            <div className="text-xs text-slate-500">
+              {storageData.used} GB / {storageData.limit} GB used
+            </div>
           </div>
 
           {/* Logout */}
-          <button 
+          <button
             onClick={handleLogout}
-            className="flex items-center gap-3 text-slate-400 hover:text-white mt-6 px-2 transition-colors w-full text-left"
+            disabled={isLoading}
+            className="flex items-center gap-3 text-slate-400 hover:text-white mt-6 px-2 transition-colors w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut size={20} />
-            <span className="font-medium">Logout</span>
+            <span className="font-medium">
+              {isLoading ? "Logging out..." : "Logout"}
+            </span>
           </button>
         </div>
       </aside>
