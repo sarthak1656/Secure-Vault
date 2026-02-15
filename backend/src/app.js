@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth.routes.js";
 import fileRoutes from "./routes/file.routes.js";
 import shareRoutes from "./routes/share.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
+import userRoutes from "./routes/user.routes.js";
 
 const app = express();
 
@@ -53,6 +54,8 @@ app.use("/api/dashboard", dashboardRoutes);
 // If you swap these, public users cannot access shared files without logging in.
 app.use("/api/files", shareRoutes); 
 app.use("/api/files", fileRoutes);
+
+app.use("/api/user", userRoutes);
 
 // 404 handler
 app.use((req, res) => {
